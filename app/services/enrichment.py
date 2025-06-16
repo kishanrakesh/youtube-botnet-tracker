@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from app.services.youtube import fetch_channel_metadata
+from app.services.youtube_client import fetch_channel_metadata_by_id
 from app.services.firestore_client import update_channel_by_id, get_channel_by_id
 from app.utils.logging import get_logger
 
@@ -13,7 +13,7 @@ async def enrich_channel(channel_id: str) -> bool:
     Fetches metadata from YouTube API and updates the corresponding Firestore document.
     Returns True if successful.
     """
-    metadata = await fetch_channel_metadata(channel_id)
+    metadata = await fetch_channel_metadata_by_id(channel_id)
     if not metadata:
         logger.warning(f"Failed to enrich channel {channel_id}")
         return False

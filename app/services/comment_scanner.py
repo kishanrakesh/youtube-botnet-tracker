@@ -1,5 +1,5 @@
 from typing import List, Optional
-from app.services.youtube import fetch_comments
+from app.services.youtube_client import fetch_comments
 from app.services.firestore_client import store_comment
 from app.utils.logging import get_logger
 

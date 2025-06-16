@@ -2,6 +2,7 @@ from google.cloud import firestore
 from typing import Dict, Optional, List
 from datetime import datetime
 import os
+from google.cloud.firestore import SERVER_TIMESTAMP
 
 from app.config import (
     COLLECTION_CHANNELS,
@@ -10,6 +11,10 @@ from app.config import (
     COLLECTION_COMMENTS,
     FIELD_CREATED_AT,
     FIELD_UPDATED_AT,
+    FIELD_DISCOVERED_AT,
+    COLLECTION_CHANNEL_DOMAIN_LINK,
+    COLLECTION_CHANNEL_CHANNEL_LINK,
+    COLLECTION_CHANNEL_VIDEO_COMMENT
 )
 
 
@@ -19,50 +24,43 @@ def get_firestore_client():
 
 # === CHANNELS ===
 
-async def get_channel_by_id(channel_id: str) -> Optional[Dict]:
+async def get_channel_by_id(channel_id: str) -> tuple:
     db = get_firestore_client()
     doc = db.collection(COLLECTION_CHANNELS).document(channel_id).get()
-    return doc.to_dict() if doc.exists else None
+    return (doc.id,doc.to_dict()) if doc.exists else (None, None)
 
+async def get_channel_by_handle(handle: str) -> Optional[tuple]:
+    db = get_firestore_client()
+    query = db.collection(COLLECTION_CHANNELS).where("handle", "==", handle).limit(1)
+    docs = query.stream()
+    for doc in docs:
+        return (doc.id,doc.to_dict())
+    return (None, None)
 
 async def update_channel_by_id(channel_id: str, data: Dict):
     db = get_firestore_client()
-    data[FIELD_UPDATED_AT] = datetime.utcnow().isoformat()
+    data[FIELD_UPDATED_AT] = datetime.utcnow().isoformat() + "Z"
     db.collection(COLLECTION_CHANNELS).document(channel_id).set(data, merge=True)
 
 
 async def create_channel(channel_id: str, data: Dict):
     db = get_firestore_client()
-    data[FIELD_CREATED_AT] = datetime.utcnow().isoformat()
+    data[FIELD_DISCOVERED_AT] = datetime.utcnow().isoformat() + "Z"
+    data[FIELD_UPDATED_AT] = datetime.utcnow().isoformat() + "Z"
     db.collection(COLLECTION_CHANNELS).document(channel_id).set(data)
 
 # app/services/firestore.py (continued)
 
-async def add_channel_with_links(
+async def add_channel_by_id(
     channel_id: str,
-    video_id: Optional[str] = None,
-    featured_channel_ids: Optional[List[str]] = None,
-    linked_domain: Optional[str] = None,
-    source: Optional[str] = None,
-    notes: Optional[str] = None,
+    channel_data: Dict,
 ) -> Dict:
-    existing = await get_channel_by_id(channel_id)
-    if existing:
-        return existing  # Or update if needed
-
-    channel_data = {
-        "channel_id": channel_id,
-        "source": source,
-        "notes": notes,
-        "linked_domain": linked_domain,
-        "featured_channel_ids": featured_channel_ids or [],
-    }
 
     await create_channel(channel_id, channel_data)
 
-    if video_id:
-        video_data = {"channel_id": channel_id}
-        await create_video(video_id, video_data)
+    # if video_id:
+    #     video_data = {"channel_id": channel_id}
+    #     await create_video(video_id, video_data)
 
     return channel_data
 
@@ -71,7 +69,21 @@ async def get_all_bot_channel_ids() -> List[str]:
     docs = db.collection(COLLECTION_CHANNELS).where("is_bot", "==", True).stream()
     return [doc.id for doc in docs]
 
+async def create_channel_channel_link(data: Dict) -> List[str]:
+    db = get_firestore_client()
+    data[FIELD_DISCOVERED_AT] = datetime.utcnow().isoformat() + "Z"
+    db.collection(COLLECTION_CHANNEL_CHANNEL_LINK).document(data["source_channel_id"] + "::" + data["target_channel_id"]).set(data)
 
+
+async def get_all_channel_ids() -> List[str]:
+    """
+    Retrieves all channel IDs from the 'channels' collection using only document IDs.
+    """
+    db = get_firestore_client()
+    collection_ref = db.collection("channels")
+    docs = collection_ref.list_documents()  # Async iterable of DocumentReferences
+
+    return [doc.id for doc in docs]
 
 # === DOMAINS ===
 
@@ -115,11 +127,22 @@ async def get_all_domains_from_firestore() -> List[str]:
     domain_names = [doc.id for doc in domain_docs]
     return domain_names
 
+async def create_domain_from_text() -> List[str]:
+    #TODO
+    pass
+
+async def create_domain_channel_link(data: Dict) -> List[str]:
+    db = get_firestore_client()
+    data[FIELD_DISCOVERED_AT] = datetime.utcnow().isoformat() + "Z"
+    db.collection(COLLECTION_CHANNEL_DOMAIN_LINK).document(data["domain_name"] + "::" + data["channel_id"]).set(data)
+
+
+
 # === VIDEOS ===
 
 async def create_video(video_id: str, data: Dict):
     db = get_firestore_client()
-    data[FIELD_CREATED_AT] = datetime.utcnow().isoformat()
+    data[FIELD_DISCOVERED_AT] = datetime.utcnow().isoformat()
     db.collection(COLLECTION_VIDEOS).document(video_id).set(data)
 
 
@@ -131,13 +154,7 @@ async def get_video_by_id(video_id: str) -> Optional[Dict]:
 
 # === COMMENTS ===
 
-async def store_comment(video_id: str, channel_id: str, comment: Dict):
+async def store_comment(comment_id, data: Dict):
     db = get_firestore_client()
-    comment_id = comment.get("id", f"{video_id}_{channel_id}_{datetime.utcnow().timestamp()}")
-    comment_data = {
-        **comment,
-        "video_id": video_id,
-        "channel_id": channel_id,
-        FIELD_CREATED_AT: datetime.utcnow().isoformat(),
-    }
-    db.collection(COLLECTION_COMMENTS).document(comment_id).set(comment_data)
+    data[FIELD_DISCOVERED_AT] = datetime.utcnow().isoformat() + "Z"
+    db.collection(COLLECTION_CHANNEL_VIDEO_COMMENT).document(comment_id).set(data)

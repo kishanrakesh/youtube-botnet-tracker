@@ -13,15 +13,15 @@ app = FastAPI(
 
 # Register route modules
 from app.api import (
-    add_domain,
-    add_channel,
+    channels,
+    domains,
     scan_comments,
     discover_sinks,
     health,
 )
 
 app.include_router(health.router, tags=["Health"])
-app.include_router(add_domain.router, prefix="/domain", tags=["Domain"])
-app.include_router(add_channel.router, prefix="/channel", tags=["Channel"])
+app.include_router(domains.router, prefix="/domain", tags=["Domain"])
+app.include_router(channels.router, prefix="/channel", tags=["Channel"])
 app.include_router(discover_sinks.router, prefix="/discover", tags=["Discovery"])
 app.include_router(scan_comments.router, prefix="/comments", tags=["Comments"])

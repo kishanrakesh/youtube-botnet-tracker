@@ -2,9 +2,9 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional, List
 
-from app.services.cse import discover_sink_channels_for_domains
+from app.services.cse_client import discover_sink_channels_for_domains
 from app.services.firestore_client import create_channel, get_all_domains_from_firestore
-from app.utils.extract import extract_channel_id
+from app.utils.pattern import extract_channel_id
 
 router = APIRouter()
 

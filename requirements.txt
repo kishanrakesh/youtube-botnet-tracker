@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+google-api-python-client
+google-cloud-firestore
+google-cloud-vision
+python-dotenv
+httpx
+pydantic
+tldextract
+playwright

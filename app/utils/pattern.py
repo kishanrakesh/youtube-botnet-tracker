@@ -1,5 +1,8 @@
 import re
 from urllib.parse import urlparse, parse_qs
+from app.services.gemini_client import is_name_likely_female #TODO
+
+FEMALE_FIRST_NAMES_SET = ['Mary']
 
 class ExtractionError(ValueError):
     pass
@@ -51,3 +54,26 @@ def extract_domain_from_text(text: str) -> str:
     if match:
         return match.group(0)
     raise ExtractionError("No domain found in input text.")
+
+
+
+def extract_candidate_name(text: str) -> str:
+    text = re.sub(r"[^a-zA-Z]", " ", text)  # remove digits/symbols
+    words = text.split()
+    for word in words:
+        if len(word) >= 3:
+            return word.lower()
+    return ""
+
+def is_suspicious_name(display_name: str) -> bool:
+    # Step 1: Clearly invalid name
+    if not re.search(r"[a-zA-Z]{3,}", display_name):
+        return False
+
+    # Step 2: Try dictionary lookup
+    candidate = extract_candidate_name(display_name)
+    if candidate in FEMALE_FIRST_NAMES_SET:
+        return True
+
+    # Step 3: Gemini fallback
+    return is_name_likely_female(display_name)
