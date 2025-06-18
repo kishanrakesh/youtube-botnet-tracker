@@ -1,6 +1,6 @@
 import re
 from urllib.parse import urlparse, parse_qs
-from app.services.gemini_client import is_name_likely_female #TODO
+# from app.services.gemini_client import is_name_likely_female #TODO
 
 FEMALE_FIRST_NAMES_SET = ['Mary']
 
@@ -51,6 +51,7 @@ def extract_domain_from_text(text: str) -> str:
     Used in Google CSE snippet parsing.
     """
     match = re.search(r"\b(?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,6}\b", text)
+    print(text)
     if match:
         return match.group(0)
     raise ExtractionError("No domain found in input text.")
@@ -76,4 +77,5 @@ def is_suspicious_name(display_name: str) -> bool:
         return True
 
     # Step 3: Gemini fallback
-    return is_name_likely_female(display_name)
+    # return is_name_likely_female(display_name)
+    return False

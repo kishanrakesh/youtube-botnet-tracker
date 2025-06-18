@@ -10,3 +10,5 @@ __pycache__/
 *.log
 .gcloudignore
 env/
+example_queries.txt
+screenshots/

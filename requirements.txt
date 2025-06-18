@@ -8,3 +8,4 @@ httpx
 pydantic
 tldextract
 playwright
+google-cloud-aiplatform

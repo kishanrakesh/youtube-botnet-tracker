@@ -127,9 +127,9 @@ async def fetch_channel_data_from_id_or_handle(channel_identifier, source, notes
 
         handle = channel_identifier
 
-        channel_id, channel_data = await get_channel_by_handle(handle)
-        if channel_data:
-            return (channel_id, channel_data)  # Or update if needed
+        # channel_id, channel_data = await get_channel_by_handle(handle)
+        # if channel_data:
+        #     return (channel_id, channel_data)  # Or update if needed
         
         raw_channel_data = await fetch_channel_metadata_by_handle(handle)
         channel_id = raw_channel_data["id"]
@@ -138,9 +138,9 @@ async def fetch_channel_data_from_id_or_handle(channel_identifier, source, notes
 
         channel_id = channel_identifier
 
-        _,channel_data = await get_channel_by_id(channel_id)
-        if channel_data:
-            return (channel_id, channel_data)  # Or update if needed
+        # _,channel_data = await get_channel_by_id(channel_id)
+        # if channel_data:
+        #     return (channel_id, channel_data)  # Or update if needed
         
         raw_channel_data = await fetch_channel_metadata_by_id(channel_identifier)
         
@@ -157,8 +157,9 @@ async def scan_video_and_store_channel_comments(video_id: str) -> Optional[List]
     If found, stores it in Firestore and returns the comment.
     """
     comments = await fetch_comments(video_id)
+    for comment in comments:
+        print(comment["snippet"]["authorDisplayName"] + " - " + comment["snippet"]["authorChannelUrl"])
     channel_id_list = await get_all_channel_ids()
-    print(channel_id_list)
     channel_id_set = set(channel_id_list)
     channel_comments = []
     if comments:
@@ -208,7 +209,6 @@ async def add_video_by_video_id(video_id: str):
             "comment_count": raw_video_data_statistics["commentCount"],
         }
         
-        print(raw_video_data_snippet)
         
         video_data = {
             "video_id": video_id,
@@ -388,3 +388,38 @@ async def update_all_stored_channels():
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to add channel: {e}")
     return {"status": "success", "channel": result}
+
+
+import csv
+import os
+
+CSV_FILE = "video_comment_channels.csv"
+
+@router.post("/scan_video_and_fetch_channel_urls")
+async def scan_video_and_fetch_channel_urls(request: ScanVideoForRequest) -> Optional[List[str]]:
+    comments = await fetch_comments(request.video_id)            # Your existing helper
+
+    # Create file if it doesn’t exist and write header once
+    file_exists = os.path.isfile(CSV_FILE)
+
+    channel_urls: List[str] = []
+
+    with open(CSV_FILE, mode="a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+
+        if not file_exists:
+            writer.writerow(["author_channel_url", "author_display_name", "like_count", "reply_count", "text_display", "is_bot"])
+
+        for comment in comments:
+            name = comment["snippet"]["authorDisplayName"]
+            channel_url = comment["snippet"]["authorChannelUrl"]
+            like_count = comment["snippet"]["likeCount"]
+            reply_count = comment["totalReplyCount"]
+            text_display = comment["snippet"]["textDisplay"]
+            writer.writerow([channel_url, name, like_count, reply_count, text_display, ""])
+            channel_urls.append(channel_url)             # keep in memory if needed
+
+                # Optional: log as you go
+                # print(f"Saved: {name} - {channel_url}")
+
+    return channel_urls

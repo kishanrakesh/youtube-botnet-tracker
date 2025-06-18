@@ -85,11 +85,14 @@ async def fetch_comments(video_id: str, author_channel_ids: Optional[List[str]] 
             if "items" in data:
                 for item in data["items"]:
                     comment = item["snippet"]["topLevelComment"]
+                    comment["totalReplyCount"] = item["snippet"]["totalReplyCount"]
                     if not author_channel_ids or comment["snippet"]["authorChannelId"]["value"] in author_channel_ids:
                         results.append(comment)
                         
                     if "replies" in item:
                         for replies in item["replies"]["comments"]:
+
+                            replies["totalReplyCount"] = 0
                             print(replies)
                             results.append(replies)
 
